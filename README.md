@@ -18,7 +18,7 @@ A lightweight, single-file web app built to read PDF manga comfortably on iPhone
 1. Upload `index.html` to a GitHub repository (e.g., `manga-reader`).
 2. Go to **Settings → Pages** (on mobile, you can also append `/settings/pages` to your repository URL).
 3. Under **Build and deployment → Branch**, select `main` and `/ (root)`, then click **Save**.
-4. Wait 1–2 minutes for your site URL (`https://<your-username>.github.io/<repo-name>/`) to go live.
+4. Wait 1–2 minutes for your site URL (`https://giovannasiago-beep.github.io/manga-reader/`) to go live.
 5. Open the URL in **Safari** on your iPhone, tap **Share**, and select **Add to Home Screen** for a full-screen app icon.
 
 ## Usage
