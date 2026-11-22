@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MangaReader">
+<title>Manga Guided Reader</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  body, html { width: 100%; height: 100%; background: #0d0d0d; color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; }
+
+  #setup-screen {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    height: 100%; padding: 24px; text-align: center; gap: 18px;
+  }
+  h1 { font-size: 24px; font-weight: 700; }
+  p.sub { font-size: 14px; color: #999; max-width: 310px; line-height: 1.4; }
+
+  .toggle-group { display: flex; background: #1e1e1e; border-radius: 12px; padding: 4px; width: 100%; max-width: 340px; }
+  .toggle-btn {
+    flex: 1; padding: 12px 8px; border: none; background: transparent; color: #888;
+    font-size: 13px; font-weight: 600; border-radius: 9px; cursor: pointer;
+  }
+  .toggle-btn.active { background: #333; color: #fff; }
+
+  .file-label {
+    background: #e50914; color: #fff; padding: 16px 28px; border-radius: 14px;
+    font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; max-width: 340px;
+    display: inline-block;
+  }
+  #pdf-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+  #status-msg { color: #ff7b7b; font-size: 13px; max-width: 330px; min-height: 18px; line-height: 1.35; }
+
+  #reader-screen { display: none; width: 100%; height: 100%; position: relative; overflow: hidden; background: #000; }
+  #viewport {
+    width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
+    transform-origin: 0 0; transition: transform 0.3s ease;
+  }
+  canvas { max-width: 100%; max-height: 100%; display: block; }
+
+  .touch-zone { position: absolute; top: 0; height: 100%; z-index: 10; }
+  #zone-prev { left: 0; width: 25%; }
+  #zone-next { right: 0; width: 75%; }
+
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%; padding: calc(env(safe-area-inset-top, 16px) + 8px) 14px 12px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+    display: flex; flex-direction: column; gap: 10px; z-index: 20; transition: opacity 0.25s;
+  }
+  #hud.hidden { opacity: 0; pointer-events: none; }
+  .hud-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .hud-btn {
+    background: rgba(255,255,255,0.18); border: none; color: #fff; padding: 7px 12px;
+    border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  #page-info { font-size: 12px; font-weight: 600; color: #eee; text-align: center; flex: 1; }
+
+  .zoom-bar {
+    display: flex; align-items: center; gap: 10px; background: rgba(20,20,20,0.8);
+    padding: 6px 12px; border-radius: 10px;
+  }
+  .zoom-label { font-size: 12px; color: #ccc; min-width: 78px; font-weight: 600; }
+  #zoom-slider { flex: 1; accent-color: #e50914; }
+
+  #loader {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none;
+    justify-content: center; align-items: center; z-index: 50; font-size: 16px; font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div id="loader">Caricamento...</div>
+
+<div id="setup-screen">
+  <div>
+    <h1>Manga Guided View</h1>
+    <p class="sub" style="margin-top:8px;">Scegli il senso di lettura e apri un PDF dall'app File.</p>
+  </div>
+
+  <div class="toggle-group">
+    <button type="button" class="toggle-btn active" id="btn-rtl" onclick="setDirection('rtl')">← Destra-Sinistra</button>
+    <button type="button" class="toggle-btn" id="btn-ltr" onclick="setDirection('ltr')">Sinistra-Destra →</button>
+  </div>
+
+  <div class="toggle-group">
+    <button type="button" class="toggle-btn active" id="btn-grid4" onclick="setGrid(4)">4 Zone</button>
+    <button type="button" class="toggle-btn" id="btn-grid6" onclick="setGrid(6)">6 Zone</button>
+  </div>
+
+  <label class="file-label" for="pdf-input">Scegli PDF da File</label>
+  <input type="file" id="pdf-input" accept="application/pdf,.pdf">
+  <div id="status-msg"></div>
+</div>
+
+<div id="reader-screen">
+  <div id="hud">
+    <div class="hud-row">
+      <button type="button" class="hud-btn" onclick="closeReader()">✕ Chiudi</button>
+      <span id="page-info">Pag. 1 / 1</span>
+      <button type="button" class="hud-btn" id="btn-overview" onclick="toggleOverview()">Pagina Intera</button>
+    </div>
+    <div class="zoom-bar" onclick="event.stopPropagation()">
+      <span class="zoom-label" id="zoom-readout">Zoom: 1.85x</span>
+      <input type="range" id="zoom-slider" min="1.2" max="2.8" step="0.05" value="1.85" oninput="onZoomChange(this.value)">
+    </div>
+  </div>
+
+  <div id="viewport">
+    <canvas id="pdf-canvas"></canvas>
+  </div>
+
+  <div id="zone-prev" class="touch-zone" onclick="prevStep()"></div>
+  <div id="zone-next" class="touch-zone" onclick="nextStep()"></div>
+</div>
+
+<script>
+  const memoryStore = {};
+
+  function readStore(k) {
+    try {
+      if (window.localStorage) return window.localStorage.getItem(k);
+    } catch (e) {}
+    return memoryStore[k] || null;
+  }
+
+  function writeStore(k, v) {
+    memoryStore[k] = v;
+    try {
+      if (window.localStorage) window.localStorage.setItem(k, v);
+    } catch (e) {}
+  }
+
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  let pdfDoc = null;
+  let bookKey = null;
+  let currentPage = 1;
+  let totalPages = 0;
+  let direction = 'rtl';
+  let gridMode = 4;
+  let currentStep = 0;
+  let zoomScale = parseFloat(readStore('mr_zoom')) || 1.85;
+  let isOverview = false;
+  let hudTimer = null;
+
+  const canvas = document.getElementById('pdf-canvas');
+  const ctx = canvas.getContext('2d');
+  const viewport = document.getElementById('viewport');
+  const zoomSlider = document.getElementById('zoom-slider');
+  const zoomReadout = document.getElementById('zoom-readout');
+  const statusMsg = document.getElementById('status-msg');
+
+  zoomSlider.value = zoomScale;
+  zoomReadout.innerText = 'Zoom: ' + zoomScale.toFixed(2) + 'x';
+
+  function setDirection(dir) {
+    direction = dir;
+    document.getElementById('btn-rtl').classList.toggle('active', dir === 'rtl');
+    document.getElementById('btn-ltr').classList.toggle('active', dir === 'ltr');
+  }
+
+  function setGrid(n) {
+    gridMode = n;
+    document.getElementById('btn-grid4').classList.toggle('active', n === 4);
+    document.getElementById('btn-grid6').classList.toggle('active', n === 6);
+  }
+
+  function saveState() {
+    if (!bookKey) return;
+    writeStore(bookKey, JSON.stringify({
+      page: currentPage,
+      step: currentStep,
+      gridMode: gridMode,
+      direction: direction
+    }));
+  }
+
+  document.getElementById('pdf-input').addEventListener('change', async function(e) {
+    statusMsg.innerText = '';
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!window.pdfjsLib) {
+      statusMsg.innerText = 'PDF.js non caricato. Controlla la connessione internet.';
+      return;
+    }
+
+    document.getElementById('loader').style.display = 'flex';
+    try {
+      const buf = await file.arrayBuffer();
+      pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+      totalPages = pdfDoc.numPages;
+      bookKey = 'mr_' + file.name + '_' + file.size + '_' + totalPages;
+
+      let startPage = 1;
+      let startStep = 0;
+      const raw = readStore(bookKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved && saved.page >= 1 && saved.page <= totalPages) {
+          if (confirm('Riprendere da Pagina ' + saved.page + ' (Zona ' + ((saved.step || 0) + 1) + ')?')) {
+            startPage = saved.page;
+            startStep = Math.min(saved.step || 0, gridMode - 1);
+            if (saved.direction) setDirection(saved.direction);
+            if (saved.gridMode) setGrid(saved.gridMode);
+          }
+        }
+      }
+
+      currentPage = startPage;
+      currentStep = Math.min(startStep, gridMode - 1);
+      isOverview = false;
+
+      document.getElementById('setup-screen').style.display = 'none';
+      document.getElementById('reader-screen').style.display = 'block';
+      await renderPage(currentPage);
+      saveState();
+    } catch (err) {
+      statusMsg.innerText = 'Errore nell\'apertura del PDF.';
+    } finally {
+      document.getElementById('loader').style.display = 'none';
+    }
+  });
+
+  async function renderPage(num) {
+    const page = await pdfDoc.getPage(num);
+    const unscaled = page.getViewport({ scale: 1 });
+    const factor = Math.max(2.2, zoomScale * 1.3);
+    const scale = Math.min((window.innerWidth * factor) / unscaled.width, (window.innerHeight * factor) / unscaled.height);
+    const vp = page.getViewport({ scale: scale });
+
+    canvas.width = vp.width;
+    canvas.height = vp.height;
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    updateHud();
+    applyZoom();
+  }
+
+  function getZones() {
+    const rows = gridMode === 4 ? 2 : 3;
+    const list = [];
+    for (let r = 0; r < rows; r++) {
+      const cols = direction === 'rtl' ? [1, 0] : [0, 1];
+      for (let i = 0; i < cols.length; i++) {
+        const c = cols[i];
+        const xRatio = c === 0 ? 0 : 1;
+        const yRatio = rows === 2 ? (r === 0 ? 0 : 1) : (r === 0 ? 0 : (r === 1 ? 0.5 : 1));
+        list.push({ xRatio: xRatio, yRatio: yRatio, scale: zoomScale });
+      }
+    }
+    return list;
+  }
+
+  function applyZoom() {
+    if (isOverview) {
+      viewport.style.transform = 'translate(0px, 0px) scale(1)';
+      document.getElementById('btn-overview').innerText = 'Zoom Zona';
+      return;
+    }
+    document.getElementById('btn-overview').innerText = 'Pagina Intera';
+
+    const zones = getZones();
+    const z = zones[Math.min(currentStep, zones.length - 1)];
+
+    const baseW = canvas.offsetWidth;
+    const baseH = canvas.offsetHeight;
+    const offsetX = (window.innerWidth - baseW) / 2;
+    const offsetY = (window.innerHeight - baseH) / 2;
+
+    const maxPanX = Math.max(0, baseW * z.scale - window.innerWidth);
+    const maxPanY = Math.max(0, baseH * z.scale - window.innerHeight);
+
+    const tx = -offsetX * z.scale - maxPanX * z.xRatio;
+    const ty = -offsetY * z.scale - maxPanY * z.yRatio;
+
+    viewport.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + z.scale + ')';
+  }
+
+  function onZoomChange(v) {
+    zoomScale = parseFloat(v);
+    isOverview = false;
+    zoomReadout.innerText = 'Zoom: ' + zoomScale.toFixed(2) + 'x';
+    writeStore('mr_zoom', String(zoomScale));
+    applyZoom();
+    showHud();
+  }
+
+  async function nextStep() {
+    showHud();
+    if (isOverview) {
+      isOverview = false;
+      applyZoom();
+      return;
+    }
+    if (currentStep < gridMode - 1) {
+      currentStep++;
+      applyZoom();
+      updateHud();
+      saveState();
+    } else if (currentPage < totalPages) {
+      document.getElementById('loader').style.display = 'flex';
+      currentPage++;
+      currentStep = 0;
+      await renderPage(currentPage);
+      saveState();
+      document.getElementById('loader').style.display = 'none';
+    }
+  }
+
+  async function prevStep() {
+    showHud();
+    if (isOverview) {
+      isOverview = false;
+      applyZoom();
+      return;
+    }
+    if (currentStep > 0) {
+      currentStep--;
+      applyZoom();
+      updateHud();
+      saveState();
+    } else if (currentPage > 1) {
+      document.getElementById('loader').style.display = 'flex';
+      currentPage--;
+      currentStep = gridMode - 1;
+      await renderPage(currentPage);
+      saveState();
+      document.getElementById('loader').style.display = 'none';
+    }
+  }
+
+  function toggleOverview() {
+    isOverview = !isOverview;
+    applyZoom();
+    showHud();
+  }
+
+  function updateHud() {
+    document.getElementById('page-info').innerText = 'Pag. ' + currentPage + ' / ' + totalPages + ' • Zona ' + (currentStep + 1) + '/' + gridMode;
+  }
+
+  function showHud() {
+    const hud = document.getElementById('hud');
+    hud.classList.remove('hidden');
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(function() { hud.classList.add('hidden'); }, 3000);
+  }
+
+  function closeReader() {
+    saveState();
+    document.getElementById('reader-screen').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+    document.getElementById('pdf-input').value = '';
+  }
+</script>
+</body>
+</html>
