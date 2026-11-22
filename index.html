@@ -19,17 +19,23 @@
   h1 { font-size: 24px; font-weight: 700; }
   p.sub { font-size: 14px; color: #999; max-width: 310px; line-height: 1.4; }
 
+  .active-mode-banner {
+    background: rgba(229, 9, 20, 0.14); border: 1px solid rgba(229, 9, 20, 0.45);
+    color: #ff9a9f; padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  }
+
   .toggle-group { display: flex; background: #1e1e1e; border-radius: 12px; padding: 4px; width: 100%; max-width: 340px; }
   .toggle-btn {
     flex: 1; padding: 12px 8px; border: none; background: transparent; color: #888;
-    font-size: 13px; font-weight: 600; border-radius: 9px; cursor: pointer;
+    font-size: 13px; font-weight: 600; border-radius: 9px; cursor: pointer; transition: 0.2s;
   }
-  .toggle-btn.active { background: #333; color: #fff; }
+  .toggle-btn.active { background: #e50914; color: #fff; box-shadow: 0 2px 8px rgba(229, 9, 20, 0.35); }
+  #grid-group .toggle-btn.active { background: #333; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
   .file-label {
     background: #e50914; color: #fff; padding: 16px 28px; border-radius: 14px;
     font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; max-width: 340px;
-    display: inline-block;
+    display: inline-block; box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
   }
   #pdf-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 
@@ -82,12 +88,14 @@
     <p class="sub" style="margin-top:8px;">Scegli il senso di lettura e apri un PDF dall'app File.</p>
   </div>
 
-  <div class="toggle-group">
-    <button type="button" class="toggle-btn active" id="btn-rtl" onclick="setDirection('rtl')">← Destra-Sinistra</button>
-    <button type="button" class="toggle-btn" id="btn-ltr" onclick="setDirection('ltr')">Sinistra-Destra →</button>
+  <div class="active-mode-banner" id="active-mode-banner">Modalità attiva: Manga (Destra → Sinistra)</div>
+
+  <div class="toggle-group" id="dir-group">
+    <button type="button" class="toggle-btn active" id="btn-rtl" onclick="setDirection('rtl')">← Manga (Destra-Sinistra)</button>
+    <button type="button" class="toggle-btn" id="btn-ltr" onclick="setDirection('ltr')">Occidentale (Sinistra-Destra) →</button>
   </div>
 
-  <div class="toggle-group">
+  <div class="toggle-group" id="grid-group">
     <button type="button" class="toggle-btn active" id="btn-grid4" onclick="setGrid(4)">4 Zone</button>
     <button type="button" class="toggle-btn" id="btn-grid6" onclick="setGrid(6)">6 Zone</button>
   </div>
@@ -101,7 +109,7 @@
   <div id="hud">
     <div class="hud-row">
       <button type="button" class="hud-btn" onclick="closeReader()">✕ Chiudi</button>
-      <span id="page-info">Pag. 1 / 1</span>
+      <span id="page-info">Pag. 1 / 1 • Manga</span>
       <button type="button" class="hud-btn" id="btn-overview" onclick="toggleOverview()">Pagina Intera</button>
     </div>
     <div class="zoom-bar" onclick="event.stopPropagation()">
@@ -156,20 +164,40 @@
   const zoomSlider = document.getElementById('zoom-slider');
   const zoomReadout = document.getElementById('zoom-readout');
   const statusMsg = document.getElementById('status-msg');
+  const activeModeBanner = document.getElementById('active-mode-banner');
 
   zoomSlider.value = zoomScale;
   zoomReadout.innerText = 'Zoom: ' + zoomScale.toFixed(2) + 'x';
+
+  function updateDirectionLabels() {
+    const isRtl = direction === 'rtl';
+    activeModeBanner.innerText = isRtl
+      ? 'Modalità attiva: Manga (Destra → Sinistra)'
+      : 'Modalità attiva: Occidentale (Sinistra → Destra)';
+    if (pdfDoc) {
+      updateHud();
+      applyZoom();
+    }
+  }
 
   function setDirection(dir) {
     direction = dir;
     document.getElementById('btn-rtl').classList.toggle('active', dir === 'rtl');
     document.getElementById('btn-ltr').classList.toggle('active', dir === 'ltr');
+    updateDirectionLabels();
+    saveState();
   }
 
   function setGrid(n) {
     gridMode = n;
     document.getElementById('btn-grid4').classList.toggle('active', n === 4);
     document.getElementById('btn-grid6').classList.toggle('active', n === 6);
+    if (currentStep >= gridMode) currentStep = gridMode - 1;
+    if (pdfDoc) {
+      updateHud();
+      applyZoom();
+    }
+    saveState();
   }
 
   function saveState() {
@@ -343,7 +371,8 @@
   }
 
   function updateHud() {
-    document.getElementById('page-info').innerText = 'Pag. ' + currentPage + ' / ' + totalPages + ' • Zona ' + (currentStep + 1) + '/' + gridMode;
+    const modeShort = direction === 'rtl' ? 'Manga' : 'Occidentale';
+    document.getElementById('page-info').innerText = 'Pag. ' + currentPage + ' / ' + totalPages + ' • ' + modeShort + ' • Zona ' + (currentStep + 1) + '/' + gridMode;
   }
 
   function showHud() {
