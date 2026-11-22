@@ -1,4 +1,4 @@
-# Manga Guided View
+# Manga Guided View for iPhone
 
 A lightweight, single-file web app built to read PDF manga comfortably on iPhone using a guided quadrant pan-and-zoom view. Everything runs locally on your device via `PDF.js`—your PDFs are never uploaded to an external server.
 
