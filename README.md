@@ -13,13 +13,10 @@ A lightweight, single-file web app built to read PDF manga comfortably on iPhone
 - **Manual Zoom Slider:** Adjust zoom level from `1.20x` to `2.80x` directly from the top HUD (saved automatically).
 - **Automatic Reading Progress:** Saves your last page, zone, reading direction, and grid mode per PDF file using `localStorage`, prompting you to resume or start over when reopened.
 
-## How to Host & Install on iPhone (GitHub Pages)
+## How to Host & Install on your iPhone
 
-1. Upload `index.html` to a GitHub repository (e.g., `manga-reader`).
-2. Go to **Settings → Pages** (on mobile, you can also append `/settings/pages` to your repository URL).
-3. Under **Build and deployment → Branch**, select `main` and `/ (root)`, then click **Save**.
-4. Wait 1–2 minutes for your site URL (`https://giovannasiago-beep.github.io/manga-reader/`) to go live.
-5. Open the URL in **Safari** on your iPhone, tap **Share**, and select **Add to Home Screen** for a full-screen app icon.
+1. Site URL (`https://giovannasiago-beep.github.io/manga-reader/`)
+2. Open the URL in **Safari** on your iPhone, tap **Share**, and select **Add to Home Screen** for a full-screen app icon.
 
 ## Usage
 
