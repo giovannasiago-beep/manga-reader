@@ -14,27 +14,27 @@
 
   #setup-screen {
     display: flex; flex-direction: column; justify-content: center; align-items: center;
-    height: 100%; padding: 24px; text-align: center; gap: 18px;
+    height: 100%; padding: 24px; text-align: center; gap: 16px;
   }
   h1 { font-size: 24px; font-weight: 700; }
-  p.sub { font-size: 14px; color: #999; max-width: 310px; line-height: 1.4; }
+  p.sub { font-size: 13px; color: #999; max-width: 320px; line-height: 1.4; }
 
   .active-mode-banner {
     background: rgba(229, 9, 20, 0.14); border: 1px solid rgba(229, 9, 20, 0.45);
-    color: #ff9a9f; padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    color: #ff9a9f; padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
   }
 
-  .toggle-group { display: flex; background: #1e1e1e; border-radius: 12px; padding: 4px; width: 100%; max-width: 340px; }
+  .toggle-group { display: flex; background: #1e1e1e; border-radius: 12px; padding: 4px; width: 100%; max-width: 350px; }
   .toggle-btn {
-    flex: 1; padding: 12px 8px; border: none; background: transparent; color: #888;
-    font-size: 13px; font-weight: 600; border-radius: 9px; cursor: pointer; transition: 0.2s;
+    flex: 1; padding: 11px 6px; border: none; background: transparent; color: #888;
+    font-size: 12.5px; font-weight: 600; border-radius: 9px; cursor: pointer; transition: 0.2s;
   }
   .toggle-btn.active { background: #e50914; color: #fff; box-shadow: 0 2px 8px rgba(229, 9, 20, 0.35); }
   #grid-group .toggle-btn.active { background: #333; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
   .file-label {
-    background: #e50914; color: #fff; padding: 16px 28px; border-radius: 14px;
-    font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; max-width: 340px;
+    background: #e50914; color: #fff; padding: 15px 28px; border-radius: 14px;
+    font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; max-width: 350px;
     display: inline-block; box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
   }
   #pdf-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
@@ -44,7 +44,7 @@
   #reader-screen { display: none; width: 100%; height: 100%; position: relative; overflow: hidden; background: #000; }
   #viewport {
     width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
-    transform-origin: 0 0; transition: transform 0.3s ease;
+    transform-origin: 0 0; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
   canvas { max-width: 100%; max-height: 100%; display: block; }
 
@@ -60,8 +60,8 @@
   #hud.hidden { opacity: 0; pointer-events: none; }
   .hud-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .hud-btn {
-    background: rgba(255,255,255,0.18); border: none; color: #fff; padding: 7px 12px;
-    border-radius: 8px; font-size: 13px; cursor: pointer;
+    background: rgba(255,255,255,0.18); border: none; color: #fff; padding: 7px 11px;
+    border-radius: 8px; font-size: 12.5px; cursor: pointer;
   }
   #page-info { font-size: 12px; font-weight: 600; color: #eee; text-align: center; flex: 1; }
 
@@ -80,12 +80,12 @@
 </head>
 <body>
 
-<div id="loader">Caricamento...</div>
+<div id="loader">Caricamento tavola...</div>
 
 <div id="setup-screen">
   <div>
     <h1>Manga Guided View</h1>
-    <p class="sub" style="margin-top:8px;">Scegli il senso di lettura e apri un PDF dall'app File.</p>
+    <p class="sub" style="margin-top:6px;">Tap singolo: vignetta/zona • Doppio tap: cambia pagina.</p>
   </div>
 
   <div class="active-mode-banner" id="active-mode-banner">Modalità attiva: Manga (Destra → Sinistra)</div>
@@ -96,8 +96,9 @@
   </div>
 
   <div class="toggle-group" id="grid-group">
-    <button type="button" class="toggle-btn active" id="btn-grid4" onclick="setGrid(4)">4 Zone</button>
-    <button type="button" class="toggle-btn" id="btn-grid6" onclick="setGrid(6)">6 Zone</button>
+    <button type="button" class="toggle-btn active" id="btn-mode-auto" onclick="setMode('auto')">Auto-Vignette</button>
+    <button type="button" class="toggle-btn" id="btn-mode-4" onclick="setMode(4)">4 Zone</button>
+    <button type="button" class="toggle-btn" id="btn-mode-6" onclick="setMode(6)">6 Zone</button>
   </div>
 
   <label class="file-label" for="pdf-input">Scegli PDF da File</label>
@@ -109,7 +110,7 @@
   <div id="hud">
     <div class="hud-row">
       <button type="button" class="hud-btn" onclick="closeReader()">✕ Chiudi</button>
-      <span id="page-info">Pag. 1 / 1 • Manga</span>
+      <span id="page-info">Pag. 1 / 1 • Manga • Auto</span>
       <button type="button" class="hud-btn" id="btn-overview" onclick="toggleOverview()">Pagina Intera</button>
     </div>
     <div class="zoom-bar" onclick="event.stopPropagation()">
@@ -122,8 +123,8 @@
     <canvas id="pdf-canvas"></canvas>
   </div>
 
-  <div id="zone-prev" class="touch-zone" onclick="prevStep()"></div>
-  <div id="zone-next" class="touch-zone" onclick="nextStep()"></div>
+  <div id="zone-prev" class="touch-zone"></div>
+  <div id="zone-next" class="touch-zone"></div>
 </div>
 
 <script>
@@ -152,8 +153,9 @@
   let currentPage = 1;
   let totalPages = 0;
   let direction = 'rtl';
-  let gridMode = 4;
+  let viewMode = 'auto'; // 'auto', 4, 6
   let currentStep = 0;
+  let activeZones = [];
   let zoomScale = parseFloat(readStore('mr_zoom')) || 1.85;
   let isOverview = false;
   let hudTimer = null;
@@ -175,8 +177,7 @@
       ? 'Modalità attiva: Manga (Destra → Sinistra)'
       : 'Modalità attiva: Occidentale (Sinistra → Destra)';
     if (pdfDoc) {
-      updateHud();
-      applyZoom();
+      rebuildZonesForCurrentPage(true);
     }
   }
 
@@ -188,14 +189,13 @@
     saveState();
   }
 
-  function setGrid(n) {
-    gridMode = n;
-    document.getElementById('btn-grid4').classList.toggle('active', n === 4);
-    document.getElementById('btn-grid6').classList.toggle('active', n === 6);
-    if (currentStep >= gridMode) currentStep = gridMode - 1;
+  function setMode(mode) {
+    viewMode = mode;
+    document.getElementById('btn-mode-auto').classList.toggle('active', mode === 'auto');
+    document.getElementById('btn-mode-4').classList.toggle('active', mode === 4);
+    document.getElementById('btn-mode-6').classList.toggle('active', mode === 6);
     if (pdfDoc) {
-      updateHud();
-      applyZoom();
+      rebuildZonesForCurrentPage(true);
     }
     saveState();
   }
@@ -205,7 +205,7 @@
     writeStore(bookKey, JSON.stringify({
       page: currentPage,
       step: currentStep,
-      gridMode: gridMode,
+      viewMode: viewMode,
       direction: direction
     }));
   }
@@ -233,22 +233,22 @@
       if (raw) {
         const saved = JSON.parse(raw);
         if (saved && saved.page >= 1 && saved.page <= totalPages) {
-          if (confirm('Riprendere da Pagina ' + saved.page + ' (Zona ' + ((saved.step || 0) + 1) + ')?')) {
+          if (confirm('Riprendere da Pagina ' + saved.page + ' (Tavola ' + ((saved.step || 0) + 1) + ')?')) {
             startPage = saved.page;
-            startStep = Math.min(saved.step || 0, gridMode - 1);
+            startStep = saved.step || 0;
             if (saved.direction) setDirection(saved.direction);
-            if (saved.gridMode) setGrid(saved.gridMode);
+            if (saved.viewMode) setMode(saved.viewMode);
           }
         }
       }
 
       currentPage = startPage;
-      currentStep = Math.min(startStep, gridMode - 1);
+      currentStep = startStep;
       isOverview = false;
 
       document.getElementById('setup-screen').style.display = 'none';
       document.getElementById('reader-screen').style.display = 'block';
-      await renderPage(currentPage);
+      await renderPage(currentPage, currentStep);
       saveState();
     } catch (err) {
       statusMsg.innerText = 'Errore nell\'apertura del PDF.';
@@ -257,7 +257,170 @@
     }
   });
 
-  async function renderPage(num) {
+  function buildGridZones(rows) {
+    const list = [];
+    for (let r = 0; r < rows; r++) {
+      const cols = direction === 'rtl' ? [1, 0] : [0, 1];
+      for (let i = 0; i < cols.length; i++) {
+        const c = cols[i];
+        const xRatio = c === 0 ? 0 : 1;
+        const yRatio = rows === 2 ? (r === 0 ? 0 : 1) : (r === 0 ? 0 : (r === 1 ? 0.5 : 1));
+        list.push({ xRatio: xRatio, yRatio: yRatio, scale: zoomScale, isPanel: false });
+      }
+    }
+    return list;
+  }
+
+  function detectPanelsFromCanvas() {
+    const w = 180;
+    const h = Math.max(120, Math.round((canvas.height / canvas.width) * w));
+    const tmp = document.createElement('canvas');
+    tmp.width = w;
+    tmp.height = h;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(canvas, 0, 0, w, h);
+
+    const data = tctx.getImageData(0, 0, w, h).data;
+    const mask = new Uint8Array(w * h);
+
+    // Identifica pixel non vicini al bianco puro (contenuto grafico/vignette)
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (lum < 238) {
+          mask[y * w + x] = 1;
+        }
+      }
+    }
+
+    // Blocchi di scansione per unire dettagli vicini e ridurre frammenti
+    const cellW = 10;
+    const cellH = 10;
+    const gw = Math.ceil(w / cellW);
+    const gh = Math.ceil(h / cellH);
+    const grid = new Uint8Array(gw * gh);
+
+    for (let gy = 0; gy < gh; gy++) {
+      for (let gx = 0; gx < gw; gx++) {
+        let activeCount = 0;
+        let totalCount = 0;
+        for (let dy = 0; dy < cellH && gy * cellH + dy < h; dy++) {
+          for (let dx = 0; dx < cellW && gx * cellW + dx < w; dx++) {
+            totalCount++;
+            if (mask[(gy * cellH + dy) * w + (gx * cellW + dx)]) activeCount++;
+          }
+        }
+        if (totalCount > 0 && activeCount / totalCount > 0.16) {
+          grid[gy * gw + gx] = 1;
+        }
+      }
+    }
+
+    const visited = new Uint8Array(gw * gh);
+    let boxes = [];
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+
+    for (let gy = 0; gy < gh; gy++) {
+      for (let gx = 0; gx < gw; gx++) {
+        const start = gy * gw + gx;
+        if (!grid[start] || visited[start]) continue;
+
+        const queue = [start];
+        visited[start] = 1;
+        let minX = gx, maxX = gx, minY = gy, maxY = gy, cells = 0;
+
+        while (queue.length > 0) {
+          const cur = queue.shift();
+          const cx = cur % gw;
+          const cy = Math.floor(cur / gw);
+          cells++;
+          if (cx < minX) minX = cx;
+          if (cx > maxX) maxX = cx;
+          if (cy < minY) minY = cy;
+          if (cy > maxY) maxY = cy;
+
+          for (let d = 0; d < dirs.length; d++) {
+            const nx = cx + dirs[d][0];
+            const ny = cy + dirs[d][1];
+            if (nx >= 0 && nx < gw && ny >= 0 && ny < gh) {
+              const nIdx = ny * gw + nx;
+              if (grid[nIdx] && !visited[nIdx]) {
+                visited[nIdx] = 1;
+                queue.push(nIdx);
+              }
+            }
+          }
+        }
+
+        const bw = (maxX - minX + 1) / gw;
+        const bh = (maxY - minY + 1) / gh;
+        if (cells >= 2 && bw >= 0.12 && bh >= 0.08) {
+          boxes.push({
+            x0: Math.max(0, minX / gw - 0.02),
+            y0: Math.max(0, minY / gh - 0.02),
+            x1: Math.min(1, (maxX + 1) / gw + 0.02),
+            y1: Math.min(1, (maxY + 1) / gh + 0.02)
+          });
+        }
+      }
+    }
+
+    if (boxes.length < 2 || boxes.length > 12) {
+      return null;
+    }
+
+    // Ordina le vignette secondo il senso di lettura (fasce verticali + direzione orizzontale)
+    boxes.sort(function(a, b) {
+      const aMidY = (a.y0 + a.y1) / 2;
+      const bMidY = (b.y0 + b.y1) / 2;
+      const aH = a.y1 - a.y0;
+      const bH = b.y1 - b.y0;
+      const sameBand = Math.abs(aMidY - bMidY) < Math.min(aH, bH) * 0.55;
+      if (!sameBand) return aMidY - bMidY;
+      const aMidX = (a.x0 + a.x1) / 2;
+      const bMidX = (b.x0 + b.x1) / 2;
+      return direction === 'rtl' ? (bMidX - aMidX) : (aMidX - bMidX);
+    });
+
+    return boxes.map(function(b) {
+      const bw = Math.max(0.15, b.x1 - b.x0);
+      const bh = Math.max(0.15, b.y1 - b.y0);
+      const fitScale = Math.min(2.8, Math.max(1.35, Math.min(0.88 / bw, 0.88 / bh)));
+      const cx = (b.x0 + b.x1) / 2;
+      const cy = (b.y0 + b.y1) / 2;
+      return {
+        cx: cx,
+        cy: cy,
+        scale: Math.max(zoomScale, fitScale * 0.85),
+        isPanel: true
+      };
+    });
+  }
+
+  function rebuildZonesForCurrentPage(keepRelativePosition) {
+    const prevLen = activeZones.length || 1;
+    if (viewMode === 'auto') {
+      const detected = detectPanelsFromCanvas();
+      activeZones = detected || buildGridZones(4);
+    } else {
+      activeZones = buildGridZones(viewMode);
+    }
+
+    if (keepRelativePosition) {
+      currentStep = Math.min(currentStep, activeZones.length - 1);
+    } else {
+      currentStep = 0;
+    }
+    if (currentStep < 0) currentStep = 0;
+    updateHud();
+    applyZoom();
+  }
+
+  async function renderPage(num, initialStep) {
     const page = await pdfDoc.getPage(num);
     const unscaled = page.getViewport({ scale: 1 });
     const factor = Math.max(2.2, zoomScale * 1.3);
@@ -267,48 +430,55 @@
     canvas.width = vp.width;
     canvas.height = vp.height;
     await page.render({ canvasContext: ctx, viewport: vp }).promise;
-    updateHud();
-    applyZoom();
-  }
 
-  function getZones() {
-    const rows = gridMode === 4 ? 2 : 3;
-    const list = [];
-    for (let r = 0; r < rows; r++) {
-      const cols = direction === 'rtl' ? [1, 0] : [0, 1];
-      for (let i = 0; i < cols.length; i++) {
-        const c = cols[i];
-        const xRatio = c === 0 ? 0 : 1;
-        const yRatio = rows === 2 ? (r === 0 ? 0 : 1) : (r === 0 ? 0 : (r === 1 ? 0.5 : 1));
-        list.push({ xRatio: xRatio, yRatio: yRatio, scale: zoomScale });
-      }
+    rebuildZonesForCurrentPage(false);
+    if (typeof initialStep === 'number') {
+      currentStep = Math.min(Math.max(0, initialStep), activeZones.length - 1);
+      updateHud();
+      applyZoom();
     }
-    return list;
   }
 
   function applyZoom() {
-    if (isOverview) {
+    if (isOverview || !activeZones.length) {
       viewport.style.transform = 'translate(0px, 0px) scale(1)';
-      document.getElementById('btn-overview').innerText = 'Zoom Zona';
+      document.getElementById('btn-overview').innerText = 'Zoom Tavola';
       return;
     }
     document.getElementById('btn-overview').innerText = 'Pagina Intera';
 
-    const zones = getZones();
-    const z = zones[Math.min(currentStep, zones.length - 1)];
-
+    const z = activeZones[Math.min(currentStep, activeZones.length - 1)];
     const baseW = canvas.offsetWidth;
     const baseH = canvas.offsetHeight;
     const offsetX = (window.innerWidth - baseW) / 2;
     const offsetY = (window.innerHeight - baseH) / 2;
 
-    const maxPanX = Math.max(0, baseW * z.scale - window.innerWidth);
-    const maxPanY = Math.max(0, baseH * z.scale - window.innerHeight);
+    const effectiveScale = viewMode === 'auto' && z.isPanel ? Math.min(2.8, Math.max(1.2, (zoomScale / 1.85) * z.scale)) : zoomScale;
 
-    const tx = -offsetX * z.scale - maxPanX * z.xRatio;
-    const ty = -offsetY * z.scale - maxPanY * z.yRatio;
+    let tx, ty;
+    if (z.isPanel) {
+      const targetScreenX = window.innerWidth * 0.5;
+      const targetScreenY = window.innerHeight * 0.5;
+      const canvasPointX = offsetX + baseW * z.cx;
+      const canvasPointY = offsetY + baseH * z.cy;
+      tx = targetScreenX - canvasPointX * effectiveScale;
+      ty = targetScreenY - canvasPointY * effectiveScale;
 
-    viewport.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + z.scale + ')';
+      const minTx = window.innerWidth - (offsetX + baseW) * effectiveScale;
+      const maxTx = -offsetX * effectiveScale;
+      const minTy = window.innerHeight - (offsetY + baseH) * effectiveScale;
+      const maxTy = -offsetY * effectiveScale;
+
+      if (minTx <= maxTx) tx = Math.min(maxTx, Math.max(minTx, tx));
+      if (minTy <= maxTy) ty = Math.min(maxTy, Math.max(minTy, ty));
+    } else {
+      const maxPanX = Math.max(0, baseW * effectiveScale - window.innerWidth);
+      const maxPanY = Math.max(0, baseH * effectiveScale - window.innerHeight);
+      tx = -offsetX * effectiveScale - maxPanX * (z.xRatio || 0);
+      ty = -offsetY * effectiveScale - maxPanY * (z.yRatio || 0);
+    }
+
+    viewport.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + effectiveScale + ')';
   }
 
   function onZoomChange(v) {
@@ -320,6 +490,16 @@
     showHud();
   }
 
+  async function goToPage(targetPage, stepIndex) {
+    if (!pdfDoc || targetPage < 1 || targetPage > totalPages) return;
+    document.getElementById('loader').style.display = 'flex';
+    currentPage = targetPage;
+    isOverview = false;
+    await renderPage(currentPage, stepIndex || 0);
+    saveState();
+    document.getElementById('loader').style.display = 'none';
+  }
+
   async function nextStep() {
     showHud();
     if (isOverview) {
@@ -327,18 +507,13 @@
       applyZoom();
       return;
     }
-    if (currentStep < gridMode - 1) {
+    if (currentStep < activeZones.length - 1) {
       currentStep++;
       applyZoom();
       updateHud();
       saveState();
     } else if (currentPage < totalPages) {
-      document.getElementById('loader').style.display = 'flex';
-      currentPage++;
-      currentStep = 0;
-      await renderPage(currentPage);
-      saveState();
-      document.getElementById('loader').style.display = 'none';
+      await goToPage(currentPage + 1, 0);
     }
   }
 
@@ -355,12 +530,7 @@
       updateHud();
       saveState();
     } else if (currentPage > 1) {
-      document.getElementById('loader').style.display = 'flex';
-      currentPage--;
-      currentStep = gridMode - 1;
-      await renderPage(currentPage);
-      saveState();
-      document.getElementById('loader').style.display = 'none';
+      await goToPage(currentPage - 1, 0);
     }
   }
 
@@ -372,7 +542,9 @@
 
   function updateHud() {
     const modeShort = direction === 'rtl' ? 'Manga' : 'Occidentale';
-    document.getElementById('page-info').innerText = 'Pag. ' + currentPage + ' / ' + totalPages + ' • ' + modeShort + ' • Zona ' + (currentStep + 1) + '/' + gridMode;
+    const layoutLabel = viewMode === 'auto' ? (activeZones[0] && activeZones[0].isPanel ? 'Auto' : 'Auto→Griglia') : (viewMode + 'Z');
+    const totalSteps = activeZones.length || 1;
+    document.getElementById('page-info').innerText = 'Pag. ' + currentPage + ' / ' + totalPages + ' • ' + modeShort + ' • ' + layoutLabel + ' ' + (currentStep + 1) + '/' + totalSteps;
   }
 
   function showHud() {
@@ -388,6 +560,42 @@
     document.getElementById('setup-screen').style.display = 'flex';
     document.getElementById('pdf-input').value = '';
   }
+
+  // Gestione Tap Singolo (vignetta/zona) vs Doppio Tap (cambia pagina)
+  function attachTapHandler(el, onSingle, onDouble) {
+    let clickTimer = null;
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (clickTimer !== null) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        onDouble();
+      } else {
+        clickTimer = setTimeout(function() {
+          clickTimer = null;
+          onSingle();
+        }, 230);
+      }
+    });
+  }
+
+  attachTapHandler(
+    document.getElementById('zone-next'),
+    nextStep,
+    function() {
+      showHud();
+      if (currentPage < totalPages) goToPage(currentPage + 1, 0);
+    }
+  );
+
+  attachTapHandler(
+    document.getElementById('zone-prev'),
+    prevStep,
+    function() {
+      showHud();
+      if (currentPage > 1) goToPage(currentPage - 1, 0);
+    }
+  );
 </script>
 </body>
 </html>
